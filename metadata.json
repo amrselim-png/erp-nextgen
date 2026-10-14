@@ -1,0 +1,6 @@
+{
+  "name": "ERP NextGen Architecture & Workbench",
+  "description": "Architectural blueprint, real-time sync simulator, metadata screen engine, and hosting recommendations for enterprise multi-tenant ERP in .NET 10 and Postgres.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
