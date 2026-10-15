@@ -22,7 +22,10 @@ import {
   Lock,
   RefreshCw,
   LogOut,
-  LogIn
+  LogIn,
+  Pencil,
+  Trash2,
+  X
 } from 'lucide-react';
 
 interface AdminManagementViewProps {
@@ -97,6 +100,8 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({
   ]);
   const [showAddBranchModal, setShowAddBranchModal] = useState(false);
   const [newBranchData, setNewBranchData] = useState({ code: '', nameAr: '', city: 'الإسكندرية' });
+  const [editingBranch, setEditingBranch] = useState<BranchRecord | null>(null);
+  const [branchToDelete, setBranchToDelete] = useState<BranchRecord | null>(null);
 
   // 2. Users & Auth state
   const [users, setUsers] = useState<UserRecord[]>([
@@ -107,6 +112,7 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({
     { id: 'u_5', name: 'مريم عادل', email: 'm.adel@pickalbatros.com', role: 'auditor', branch: 'CAI-HQ', isActive: false, lastLogin: 'منذ أسبوع' }
   ]);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
   const [newUser, setNewUser] = useState({ name: '', email: '', role: 'cashier' as UserRole, branch: 'HRG-MAIN' });
 
   // Auth simulator state
@@ -202,6 +208,39 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({
     setBranches([...branches, newBr]);
     setShowAddBranchModal(false);
     setNewBranchData({ code: '', nameAr: '', city: 'الإسكندرية' });
+    setSettingsNotice(`تم إضافة الفرع الجديد (${newBr.nameAr}) بنجاح.`);
+    setTimeout(() => setSettingsNotice(null), 3000);
+  };
+
+  const handleSaveEditBranch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBranch) return;
+    setBranches(branches.map(b => b.id === editingBranch.id ? editingBranch : b));
+    setSettingsNotice(`تم تعديل بيانات الفرع (${editingBranch.nameAr}) بنجاح.`);
+    setEditingBranch(null);
+    setTimeout(() => setSettingsNotice(null), 4000);
+  };
+
+  const handleConfirmDeleteBranch = () => {
+    if (!branchToDelete) return;
+    if (branchToDelete.isMain) {
+      alert('لا يمكن حذف الفرع الرئيسي للمنشأة!');
+      setBranchToDelete(null);
+      return;
+    }
+    setBranches(branches.filter(b => b.id !== branchToDelete.id));
+    setSettingsNotice(`تم حذف الفرع (${branchToDelete.nameAr}) بنجاح.`);
+    setBranchToDelete(null);
+    setTimeout(() => setSettingsNotice(null), 4000);
+  };
+
+  const handleSaveEditUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setUsers(users.map(u => u.id === editingUser.id ? editingUser : u));
+    setAuthNotice(`تم تحديث بيانات وصلاحيات المستخدم (${editingUser.name}) بنجاح.`);
+    setEditingUser(null);
+    setTimeout(() => setAuthNotice(null), 4000);
   };
 
   const handleToggleUser = (userId: string) => {
@@ -482,9 +521,29 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({
                     <p className="text-[11px] text-slate-500">{br.city}</p>
                   </div>
 
-                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                    نشط
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      {br.status === 'active' ? 'نشط' : 'معطل'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setEditingBranch({ ...br })}
+                      className="p-1.5 rounded-lg border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 transition-all"
+                      title="تعديل بيانات الفرع"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    {!br.isMain && (
+                      <button
+                        type="button"
+                        onClick={() => setBranchToDelete(br)}
+                        className="p-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition-all"
+                        title="حذف الفرع"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -614,7 +673,15 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({
                       </td>
                       <td className="p-3 text-slate-500">{u.lastLogin}</td>
                       <td className="p-3">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => setEditingUser({ ...u })}
+                            className="p-1.5 rounded-lg border bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 text-xs font-bold transition-all"
+                            title="تعديل بيانات المستخدم والصلاحيات (user.edit)"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+
                           <button
                             onClick={() => handleToggleUser(u.id)}
                             className={`p-1.5 rounded-lg border text-xs font-bold transition-all ${
@@ -977,6 +1044,211 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({
                 className="px-4 py-2 bg-sky-600 text-white rounded-xl text-xs font-bold hover:bg-sky-700 shadow-sm"
               >
                 إرسال الدعوة
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Edit Branch Modal */}
+      {editingBranch && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <form onSubmit={handleSaveEditBranch} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 border border-slate-200" dir="rtl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                <Pencil className="w-4 h-4 text-sky-600" />
+                <span>تعديل بيانات الفرع ({editingBranch.code})</span>
+              </h4>
+              <button 
+                type="button" 
+                onClick={() => setEditingBranch(null)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">كود الفرع</label>
+              <input
+                type="text"
+                required
+                value={editingBranch.code}
+                onChange={(e) => setEditingBranch({ ...editingBranch, code: e.target.value.toUpperCase() })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono uppercase"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">اسم الفرع بالعربية</label>
+              <input
+                type="text"
+                required
+                value={editingBranch.nameAr}
+                onChange={(e) => setEditingBranch({ ...editingBranch, nameAr: e.target.value })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">المدينة / المحافظة</label>
+              <input
+                type="text"
+                value={editingBranch.city}
+                onChange={(e) => setEditingBranch({ ...editingBranch, city: e.target.value })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">الحالة التشغيلية</label>
+              <select
+                value={editingBranch.status}
+                onChange={(e) => setEditingBranch({ ...editingBranch, status: e.target.value as 'active' | 'inactive' })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
+              >
+                <option value="active">نشط وعامل</option>
+                <option value="inactive">معطل مؤقتاً</option>
+              </select>
+            </div>
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingBranch(null)}
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200"
+              >
+                إلغاء
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-sky-600 text-white rounded-xl text-xs font-bold hover:bg-sky-700 shadow-sm"
+              >
+                حفظ التعديلات
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Delete Branch Confirmation Modal */}
+      {branchToDelete && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4 border border-rose-200" dir="rtl">
+            <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div className="text-center">
+              <h4 className="text-base font-extrabold text-slate-900">تأكيد حذف الفرع</h4>
+              <p className="text-xs text-slate-600 mt-2">
+                هل أنت متأكد من حذف الفرع <strong className="text-rose-700 font-bold">{branchToDelete.nameAr}</strong> ({branchToDelete.code})؟
+              </p>
+              <p className="text-[11px] text-amber-600 font-medium mt-1">
+                سيتم إزالة الفرع نهائياً مع فحص عدم وجود حركات جارية عليه.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setBranchToDelete(null)}
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200 flex-1"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteBranch}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm flex-1"
+              >
+                تأكيد الحذف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <form onSubmit={handleSaveEditUser} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 border border-slate-200" dir="rtl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                <Pencil className="w-4 h-4 text-indigo-600" />
+                <span>تعديل المستخدم والصلاحيات (user.edit)</span>
+              </h4>
+              <button 
+                type="button" 
+                onClick={() => setEditingUser(null)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">الاسم الكامل</label>
+              <input
+                type="text"
+                required
+                value={editingUser.name}
+                onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني للعمل</label>
+              <input
+                type="email"
+                required
+                value={editingUser.email}
+                onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">الدور الوظيفي (Role)</label>
+              <select
+                value={editingUser.role}
+                onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as UserRole })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
+              >
+                <option value="super_admin">مدير نظام شامل (super_admin)</option>
+                <option value="branch_manager">مدير فرع (branch_manager)</option>
+                <option value="cashier">كاشير نقطة بيع (cashier)</option>
+                <option value="accountant">محاسب عام (accountant)</option>
+                <option value="auditor">مراجع تدقيق (auditor)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">الفرع المخصص</label>
+              <select
+                value={editingUser.branch}
+                onChange={(e) => setEditingUser({ ...editingUser, branch: e.target.value })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
+              >
+                {branches.map(b => (
+                  <option key={b.id} value={b.code}>{b.nameAr} ({b.code})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">الحالة التشغيلية</label>
+              <select
+                value={editingUser.isActive ? 'true' : 'false'}
+                onChange={(e) => setEditingUser({ ...editingUser, isActive: e.target.value === 'true' })}
+                className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
+              >
+                <option value="true">مفعل ونشط</option>
+                <option value="false">معطل وموقوف</option>
+              </select>
+            </div>
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingUser(null)}
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200"
+              >
+                إلغاء
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 shadow-sm"
+              >
+                حفظ التعديلات
               </button>
             </div>
           </form>

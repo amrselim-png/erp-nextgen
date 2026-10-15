@@ -26,6 +26,17 @@ import { HrPayrollView } from './components/HrPayrollView.tsx';
 import { ManufacturingBomView } from './components/ManufacturingBomView.tsx';
 import { MedicalClinicsView } from './components/MedicalClinicsView.tsx';
 import { EtaEinvoiceView } from './components/EtaEinvoiceView.tsx';
+import { CustomerManagementView } from './components/CustomerManagementView.tsx';
+import { SupplierManagementView } from './components/SupplierManagementView.tsx';
+import { PaymentMethodsView } from './components/PaymentMethodsView.tsx';
+import { ExpensesManagementView } from './components/ExpensesManagementView.tsx';
+import { AccountingIntegrationMappingView } from './components/AccountingIntegrationMappingView.tsx';
+import { ReservationsManagementView } from './components/ReservationsManagementView.tsx';
+import { CustomerFollowupsView } from './components/CustomerFollowupsView.tsx';
+import { FixedAssetsManagementView } from './components/FixedAssetsManagementView.tsx';
+import { DailySessionsOperationsView } from './components/DailySessionsOperationsView.tsx';
+import { INITIAL_PAYMENT_METHODS } from './data/mockCrmAndOperationsData.ts';
+import { PaymentMethodRecord } from './types.ts';
 import { 
   Building2, 
   ShieldCheck, 
@@ -41,6 +52,7 @@ export default function App() {
   const [userRole, setUserRole] = useState<UserRole>('super_admin');
   const [isSimulatingOnline, setIsSimulatingOnline] = useState(true);
   const [pingMs] = useState(44); // Frankfurt benchmark ping from Egypt
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodRecord[]>(INITIAL_PAYMENT_METHODS);
 
   const tabTitles: Record<AppTab, { title: string; category: string; description: string }> = {
     admin_management: {
@@ -52,6 +64,51 @@ export default function App() {
       title: 'شاشة الكاشير ونقاط البيع السريعة (POS Terminal)', 
       category: 'المنظومة التشغيلية', 
       description: 'واجهة مبيعات سريعة مع فواتير إلكترونية متوافقة مع منظومة الضرائب المصرية ودعم العمل بدون إنترنت' 
+    },
+    customers: {
+      title: 'إدارة العملاء وحسابات المدينين (Customers Master)',
+      category: 'إدارة العملاء والعلاقات',
+      description: 'جدول مستقل لإدارة بيانات العملاء، حدود الائتمان، الأرصدة، كشف الحساب والمتابعة'
+    },
+    suppliers: {
+      title: 'إدارة الموردين وحسابات الدائنين (Suppliers Master)',
+      category: 'المشتريات والتوريدات',
+      description: 'جدول مستقل لإدارة الموردين المعتمدين، شروط الائتمان، المديونيات وأوامر الشراء'
+    },
+    payment_methods: {
+      title: 'إدارة طرق السداد وربطها الحصري بالكاشير (Payment Methods)',
+      category: 'المنظومة المالية',
+      description: 'تحديد وسائل الدفع المعتمدة ونسب العمولات والحساب المالي المربوط حصراً بشاشة نقاط البيع'
+    },
+    expenses: {
+      title: 'تسجيل المصروفات وسندات الصرف وربطها بطرق السداد (Expenses)',
+      category: 'المنظومة المالية',
+      description: 'توثيق المصروفات التشغيلية والنثريات وخصمها المباشر من طرق السداد وتوليد القيود'
+    },
+    accounting_mapping: {
+      title: 'شاشة ربط التسجيل بالحسابات ومولد القيود الحصري (Strict Mapping)',
+      category: 'المنظومة المالية',
+      description: 'المصدر الوحيد والحصري لقيود اليومية لمنع أي قيد يدوي وجعل العمليات مصدر القيود'
+    },
+    reservations: {
+      title: 'إدارة الحجوزات والمواعيد المسبقة (Bookings & Calendar)',
+      category: 'الحجوزات والتشغيل',
+      description: 'جدول مستقل لإدارة المواعيد المجدولة، تحصيل العرابين، والتحويل المباشر لجلسات تشغيل'
+    },
+    customer_followups: {
+      title: 'سجل متابعات العملاء وعلاقات العملاء (CRM Follow-ups)',
+      category: 'إدارة العملاء والعلاقات',
+      description: 'جدول مستقل لتوثيق المكالمات ومحادثات الواتساب وقياس رضا العملاء والمواعيد القادمة'
+    },
+    fixed_assets: {
+      title: 'إدارة الأصول الثابتة وعمود تتبع استهلاك الجهاز (Fixed Assets)',
+      category: 'الأصول والتشغيل',
+      description: 'جدول مستقل للأصول مع عمود مخصص لمتابعة ساعات تشغيل الجهاز وعدد الجلسات ونسبة الاستهلاك'
+    },
+    daily_sessions: {
+      title: 'شاشة التشغيل وتسجيل الجلسات المنفذة خلال اليوم (Daily Sessions)',
+      category: 'الحجوزات والتشغيل',
+      description: 'تسجيل كافة الجلسات المنفذة اليوم وتحديث استهلاك الجهاز المرتبط وتوليد القيد المحاسبي'
     },
     inventory_ops: { 
       title: 'إدارة المخازن وحركات البضاعة (Inventory Operations)', 
@@ -206,7 +263,60 @@ export default function App() {
 
             {/* Operational Core ERP Modules */}
             {currentTab === 'pos_terminal' && (
-              <PosTerminalView currentTenant={selectedTenant} userRole={userRole} />
+              <PosTerminalView currentTenant={selectedTenant} userRole={userRole} paymentMethods={paymentMethods} />
+            )}
+            {currentTab === 'customers' && (
+              <CustomerManagementView currentTenant={selectedTenant} userRole={userRole} />
+            )}
+            {currentTab === 'suppliers' && (
+              <SupplierManagementView currentTenant={selectedTenant} userRole={userRole} />
+            )}
+            {currentTab === 'payment_methods' && (
+              <PaymentMethodsView 
+                currentTenant={selectedTenant} 
+                userRole={userRole} 
+                paymentMethods={paymentMethods} 
+                onUpdatePaymentMethods={setPaymentMethods}
+                onNavigateToPos={() => setCurrentTab('pos_terminal')}
+              />
+            )}
+            {currentTab === 'expenses' && (
+              <ExpensesManagementView 
+                currentTenant={selectedTenant} 
+                userRole={userRole} 
+                paymentMethods={paymentMethods} 
+              />
+            )}
+            {currentTab === 'accounting_mapping' && (
+              <AccountingIntegrationMappingView 
+                currentTenant={selectedTenant} 
+                userRole={userRole} 
+                onNavigateToTab={(t) => setCurrentTab(t as any)}
+              />
+            )}
+            {currentTab === 'reservations' && (
+              <ReservationsManagementView 
+                currentTenant={selectedTenant} 
+                userRole={userRole} 
+                onExecuteSession={() => setCurrentTab('daily_sessions')}
+              />
+            )}
+            {currentTab === 'customer_followups' && (
+              <CustomerFollowupsView currentTenant={selectedTenant} userRole={userRole} />
+            )}
+            {currentTab === 'fixed_assets' && (
+              <FixedAssetsManagementView 
+                currentTenant={selectedTenant} 
+                userRole={userRole} 
+                onNavigateToSessions={() => setCurrentTab('daily_sessions')}
+              />
+            )}
+            {currentTab === 'daily_sessions' && (
+              <DailySessionsOperationsView 
+                currentTenant={selectedTenant} 
+                userRole={userRole} 
+                paymentMethods={paymentMethods}
+              />
             )}
             {currentTab === 'inventory_ops' && (
               <InventoryOperationsView currentTenant={selectedTenant} userRole={userRole} />

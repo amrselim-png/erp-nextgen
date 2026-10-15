@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TenantContext, UserRole } from '../types.ts';
+import { TenantContext, UserRole, PaymentMethodRecord } from '../types.ts';
 import { 
   ShoppingCart, 
   Search, 
@@ -11,6 +11,7 @@ import {
   CreditCard, 
   Banknote, 
   QrCode, 
+  Smartphone,
   Clock, 
   RotateCcw, 
   Percent, 
@@ -41,6 +42,7 @@ interface CartItem extends PosItem {
 interface PosTerminalViewProps {
   currentTenant: TenantContext;
   userRole: UserRole;
+  paymentMethods?: PaymentMethodRecord[];
 }
 
 const POS_CATALOG: PosItem[] = [
@@ -55,7 +57,7 @@ const POS_CATALOG: PosItem[] = [
   { id: 'pos-9', sku: 'LND-SHT-09', name_ar: 'خدمة غسيل وكي قميص رجالي', category: 'خدمات الغرف', price: 90, stock: 999, imageColor: 'from-cyan-500 to-blue-700' }
 ];
 
-export const PosTerminalView: React.FC<PosTerminalViewProps> = ({ currentTenant, userRole }) => {
+export const PosTerminalView: React.FC<PosTerminalViewProps> = ({ currentTenant, userRole, paymentMethods }) => {
   const [catalog, setCatalog] = useState<PosItem[]>(POS_CATALOG);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -67,7 +69,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({ currentTenant,
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'visa' | 'room_charge' | 'instapay'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   const [guestRoom, setGuestRoom] = useState<string>('الغرفة 204');
   const [lastInvoice, setLastInvoice] = useState<any | null>(null);
 
@@ -469,53 +471,46 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({ currentTenant,
               </span>
             </div>
 
-            {/* Payment Method Selector */}
+            {/* Payment Method Selector - Linked Exclusively to Payment Methods Screen */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 block">اختر وسيلة الدفع:</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 block">اختر وسيلة الدفع المعتمدة:</label>
+                <span className="text-[10px] text-purple-700 font-mono bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                  مربوطة حصراً بجدول طرق السداد
+                </span>
+              </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('cash')}
-                  className={`p-3 rounded-xl border text-right cursor-pointer flex items-center gap-2 transition-all ${
-                    paymentMethod === 'cash' ? 'bg-emerald-50 border-emerald-500 text-emerald-800 font-bold' : 'bg-slate-50 border-slate-200 text-slate-700'
-                  }`}
-                >
-                  <Banknote className="w-4 h-4 text-emerald-600" />
-                  <span>نقدي (Cash)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('visa')}
-                  className={`p-3 rounded-xl border text-right cursor-pointer flex items-center gap-2 transition-all ${
-                    paymentMethod === 'visa' ? 'bg-sky-50 border-sky-500 text-sky-800 font-bold' : 'bg-slate-50 border-slate-200 text-slate-700'
-                  }`}
-                >
-                  <CreditCard className="w-4 h-4 text-sky-600" />
-                  <span>بطاقة بنكية (Card)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('room_charge')}
-                  className={`p-3 rounded-xl border text-right cursor-pointer flex items-center gap-2 transition-all ${
-                    paymentMethod === 'room_charge' ? 'bg-purple-50 border-purple-500 text-purple-800 font-bold' : 'bg-slate-50 border-slate-200 text-slate-700'
-                  }`}
-                >
-                  <Building2 className="w-4 h-4 text-purple-600" />
-                  <span>تحميل على الغرفة</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('instapay')}
-                  className={`p-3 rounded-xl border text-right cursor-pointer flex items-center gap-2 transition-all ${
-                    paymentMethod === 'instapay' ? 'bg-amber-50 border-amber-500 text-amber-800 font-bold' : 'bg-slate-50 border-slate-200 text-slate-700'
-                  }`}
-                >
-                  <QrCode className="w-4 h-4 text-amber-600" />
-                  <span>إنستاباي (InstaPay)</span>
-                </button>
+                {(paymentMethods ? paymentMethods.filter(m => m.isActive) : [
+                  { id: 'pm-1', code: 'cash', nameAr: 'نقدي (خزينة الكاشير)', iconName: 'Banknote', commissionPercent: 0 },
+                  { id: 'pm-2', code: 'visa', nameAr: 'بطاقة بنكية (Card)', iconName: 'CreditCard', commissionPercent: 1.5 },
+                  { id: 'pm-3', code: 'room_charge', nameAr: 'تحميل على الغرفة', iconName: 'Building2', commissionPercent: 0 },
+                  { id: 'pm-4', code: 'instapay', nameAr: 'إنستاباي (InstaPay)', iconName: 'QrCode', commissionPercent: 0 }
+                ]).map(method => (
+                  <button
+                    key={method.id}
+                    type="button"
+                    onClick={() => setPaymentMethod(method.code)}
+                    className={`p-3 rounded-xl border text-right cursor-pointer flex items-center justify-between transition-all ${
+                      paymentMethod === method.code 
+                        ? 'bg-purple-50 border-purple-500 text-purple-900 font-bold shadow-xs' 
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {method.code === 'cash' ? <Banknote className="w-4 h-4 text-emerald-600" /> :
+                       method.code === 'instapay' ? <QrCode className="w-4 h-4 text-amber-600" /> :
+                       method.code === 'room_charge' ? <Building2 className="w-4 h-4 text-purple-600" /> :
+                       method.code === 'digital_wallet' ? <Smartphone className="w-4 h-4 text-purple-600" /> :
+                       <CreditCard className="w-4 h-4 text-sky-600" />}
+                      <span>{method.nameAr}</span>
+                    </div>
+                    {method.commissionPercent > 0 && (
+                      <span className="text-[10px] text-amber-700 font-mono bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                        {method.commissionPercent}%
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
 

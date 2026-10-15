@@ -1,6 +1,15 @@
 export type AppTab = 
   | 'pos_terminal'
   | 'inventory_ops'
+  | 'customers'
+  | 'suppliers'
+  | 'payment_methods'
+  | 'expenses'
+  | 'accounting_mapping'
+  | 'reservations'
+  | 'customer_followups'
+  | 'fixed_assets'
+  | 'daily_sessions'
   | 'purchasing'
   | 'accounting_ledger'
   | 'hr_payroll'
@@ -180,4 +189,158 @@ export interface OutboxMessage {
   created_at: string;
   processed_at?: string;
   error?: string;
+}
+
+export interface CustomerRecord {
+  id: string;
+  code: string;
+  name: string;
+  phone: string;
+  email: string;
+  nationalIdOrTax: string;
+  creditLimit: number;
+  currentBalance: number;
+  category: 'VIP' | 'Regular' | 'Corporate' | 'Wholesale';
+  branch: string;
+  status: 'active' | 'suspended';
+  notes: string;
+  createdAt: string;
+}
+
+export interface SupplierRecord {
+  id: string;
+  code: string;
+  name: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  taxNumber: string;
+  commercialRegister: string;
+  paymentTermsDays: number;
+  currentBalance: number;
+  category: 'خامات ومواد أولية' | 'أجهزة ومعدات' | 'مستلزمات طبية وتجميل' | 'صيانة وخدمات' | 'عام';
+  status: 'active' | 'inactive';
+  notes: string;
+  createdAt: string;
+}
+
+export interface PaymentMethodRecord {
+  id: string;
+  code: string;
+  nameAr: string;
+  nameEn: string;
+  type: 'cash' | 'card_pos' | 'bank_transfer' | 'digital_wallet' | 'credit_account';
+  commissionPercent: number;
+  linkedAccountId: string;
+  linkedAccountName: string;
+  isActive: boolean;
+  requiresReferenceNumber: boolean;
+  isExclusiveToCashier: boolean;
+  iconName: string;
+}
+
+export interface ExpenseRecord {
+  id: string;
+  expenseNo: string;
+  date: string;
+  category: 'إيجارات ومرافق' | 'صيانة أجهزة ومعدات' | 'ضيافة وبوفيه' | 'نثريات ومطبوعات' | 'تسويق وإعلانات' | 'انتقالات وبترول';
+  amount: number;
+  paymentMethodId: string;
+  paymentMethodName: string;
+  beneficiary: string;
+  referenceNo: string;
+  branch: string;
+  notes: string;
+  recordedBy: string;
+  status: 'معتمد' | 'قيد المراجعة';
+  journalEntryId?: string;
+}
+
+export interface BookingRecord {
+  id: string;
+  bookingNo: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  serviceName: string;
+  bookingDate: string;
+  bookingTime: string;
+  assignedStaff: string;
+  branch: string;
+  depositAmount: number;
+  totalEstimatedAmount: number;
+  status: 'مؤكد' | 'قيد الانتظار' | 'مكتمل وتم التشغيل' | 'ملغي';
+  notes: string;
+}
+
+export interface CustomerFollowupRecord {
+  id: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  contactDate: string;
+  channel: 'اتصال هاتفي' | 'واتساب (WhatsApp)' | 'زيارة مباشرة' | 'بريد إلكتروني';
+  purpose: 'متابعة ما بعد الجلسة' | 'تذكير بموعد حجز' | 'تحصيل مديونية' | 'عرض ترويجي وخاص';
+  agentName: string;
+  summary: string;
+  nextFollowupDate: string;
+  outcome: 'إيجابي ومهتم' | 'تم تأكيد الحضور' | 'تم السداد' | 'لم يرد / مشغول' | 'غير مهتم';
+}
+
+export interface FixedAssetRecord {
+  id: string;
+  assetCode: string;
+  assetName: string;
+  category: 'أجهزة ليزر وتجميل' | 'أجهزة فحص وكشف' | 'نقاط بيع وحواسب' | 'سيارات ومعدات نقل' | 'أثاث وديكورات';
+  purchaseDate: string;
+  purchaseCost: number;
+  usefulLifeMonths: number;
+  currentBookValue: number;
+  accumulatedDepreciation: number;
+  branch: string;
+  // Dedicated column for machine wear and usage tracking:
+  deviceUsageTracker: {
+    totalOperatingHours: number;
+    totalSessionsExecuted: number;
+    maxRatedLifespanHours: number;
+    wearPercentage: number;
+    lastMaintenanceDate: string;
+    nextMaintenanceDueHours: number;
+    status: 'ممتاز وعامل' | 'يحتاج صيانة دورية' | 'استهلاك مرتفع';
+  };
+}
+
+export interface DailySessionRecord {
+  id: string;
+  sessionNo: string;
+  dateTime: string;
+  customerId: string;
+  customerName: string;
+  serviceTitle: string;
+  deviceId: string;
+  deviceName: string;
+  specialistName: string;
+  durationMinutes: number;
+  roomNumber: string;
+  materialsConsumed: string;
+  sessionFee: number;
+  status: 'منفذة بنجاح' | 'جارية الآن' | 'ملغاة';
+  paymentMethod: string;
+  notes: string;
+  journalEntryGenerated: boolean;
+}
+
+export interface AccountingMappingRule {
+  id: string;
+  transactionType: 'مبيعات الكاشير (POS)' | 'تسجيل مصروف' | 'سداد مورد' | 'تحصيل من عميل' | 'إهلاك أصول شهرية' | 'جلسة تشغيل يومية';
+  code: string;
+  nameAr: string;
+  sourceScreen: string;
+  debitAccountCode: string;
+  debitAccountName: string;
+  creditAccountCode: string;
+  creditAccountName: string;
+  isStrictExclusiveSource: boolean;
+  autoPostEnabled: boolean;
+  description: string;
 }

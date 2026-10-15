@@ -943,5 +943,245 @@ export const ALL_DATABASE_TABLES: DatabaseTableDefinition[] = [
       { name: 'total_credit', type: 'numeric(18,4)', nullable: false, descriptionAr: 'إجمالي الدائن' }
     ],
     sampleSql: `SELECT entry_no, entry_date, status, total_debit, total_credit FROM accounting.journal_entries;`
+  },
+
+  // 1. CUSTOMERS INDEPENDENT TABLE (جدول مستقل للعملاء)
+  {
+    schema: 'sales',
+    tableName: 'customers',
+    displayNameAr: 'العملاء والمدينون (Customers Master)',
+    descriptionAr: 'جدول مستقل لإدارة العملاء والأرصدة وحدود الائتمان وسجل الفواتير مع عزل RLS كامل.',
+    hasStdColumns: true,
+    hasRls: true,
+    triggers: ['touch_row', 'audit_trigger', 'realtime_notify'],
+    columns: [
+      { name: 'tenant_id', type: 'uuid', nullable: false, isPk: true, isFk: true, fkTarget: 'core.tenants(id)', descriptionAr: 'معرف المنشأة' },
+      { name: 'id', type: 'uuid', nullable: false, isPk: true, isStd: true, descriptionAr: 'المعرف الفريد للعميل' },
+      { name: 'code', type: 'text', nullable: false, descriptionAr: 'كود العميل (مثال: CUST-0104)' },
+      { name: 'name', type: 'text', nullable: false, descriptionAr: 'اسم العميل ثلاثي أو الاسم التجاري' },
+      { name: 'phone', type: 'text', nullable: false, descriptionAr: 'رقم الهاتف الأساسي للاتصال والواتساب' },
+      { name: 'email', type: 'citext', nullable: true, descriptionAr: 'البريد الإلكتروني للعميل' },
+      { name: 'national_id_or_tax', type: 'text', nullable: true, descriptionAr: 'الرقم القومي أو البطاقة الضريبية' },
+      { name: 'category', type: 'text', nullable: false, descriptionAr: 'تصنيف العميل (VIP / Regular / Corporate / Wholesale)' },
+      { name: 'credit_limit', type: 'numeric(18,4)', nullable: false, descriptionAr: 'الحد الائتماني الأقصى المسموح' },
+      { name: 'current_balance', type: 'numeric(18,4)', nullable: false, descriptionAr: 'الرصيد المالي الحالي للعميل' },
+      { name: 'branch_id', type: 'uuid', nullable: false, isFk: true, fkTarget: 'core.branches(id)', descriptionAr: 'فرع التسجيل الأساسي' },
+      { name: 'status', type: 'text', nullable: false, descriptionAr: 'الحالة التشغيلية (active / suspended)' },
+      { name: 'notes', type: 'text', nullable: true, descriptionAr: 'ملاحظات خاصة بالعميل وتفضيلاته' },
+      { name: 'version', type: 'integer', nullable: false, isStd: true, descriptionAr: 'رقم الإصدار لمنع التضارب' },
+      { name: 'created_at', type: 'timestamptz', nullable: false, isStd: true, descriptionAr: 'تاريخ التسجيل' }
+    ],
+    sampleSql: `SELECT id, code, name, phone, current_balance, credit_limit, status FROM sales.customers WHERE status = 'active';`
+  },
+
+  // 2. SUPPLIERS INDEPENDENT TABLE (جدول مستقل للموردين)
+  {
+    schema: 'purchasing',
+    tableName: 'suppliers',
+    displayNameAr: 'الموردون والدائنون (Suppliers Master)',
+    descriptionAr: 'جدول مستقل لإدارة الموردين وأوامر الشراء والمديونيات وبيانات الضرائب والسجل التجاري.',
+    hasStdColumns: true,
+    hasRls: true,
+    triggers: ['touch_row', 'audit_trigger', 'realtime_notify'],
+    columns: [
+      { name: 'tenant_id', type: 'uuid', nullable: false, isPk: true, isFk: true, fkTarget: 'core.tenants(id)', descriptionAr: 'معرف المنشأة' },
+      { name: 'id', type: 'uuid', nullable: false, isPk: true, isStd: true, descriptionAr: 'المعرف الفريد للمورد' },
+      { name: 'code', type: 'text', nullable: false, descriptionAr: 'كود المورد (مثال: SUP-2041)' },
+      { name: 'name', type: 'text', nullable: false, descriptionAr: 'اسم الشركة أو المورد القانوني' },
+      { name: 'contact_person', type: 'text', nullable: true, descriptionAr: 'الشخص المسؤول وممثل المبيعات' },
+      { name: 'phone', type: 'text', nullable: false, descriptionAr: 'رقم هاتف المورد' },
+      { name: 'email', type: 'citext', nullable: true, descriptionAr: 'البريد الإلكتروني للمورد' },
+      { name: 'tax_number', type: 'text', nullable: true, descriptionAr: 'رقم التسجيل الضريبي المعتمد' },
+      { name: 'commercial_register', type: 'text', nullable: true, descriptionAr: 'رقم السجل التجاري' },
+      { name: 'payment_terms_days', type: 'integer', nullable: false, descriptionAr: 'أجل السداد بالأيام (فترة الائتمان)' },
+      { name: 'current_balance', type: 'numeric(18,4)', nullable: false, descriptionAr: 'رصيد المديونية المستحقة للمورد' },
+      { name: 'category', type: 'text', nullable: false, descriptionAr: 'تصنيف المورد والمجال التوريدي' },
+      { name: 'status', type: 'text', nullable: false, descriptionAr: 'حالة التعامل (active / inactive)' },
+      { name: 'version', type: 'integer', nullable: false, isStd: true, descriptionAr: 'رقم الإصدار' }
+    ],
+    sampleSql: `SELECT id, code, name, phone, current_balance, payment_terms_days FROM purchasing.suppliers;`
+  },
+
+  // 3. PAYMENT METHODS TABLE (طرق السداد المربوطة حصراً بالكاشير)
+  {
+    schema: 'sales',
+    tableName: 'payment_methods',
+    displayNameAr: 'طرق السداد (Payment Methods - POS Linked)',
+    descriptionAr: 'جدول طرق السداد المربوطة حصراً بنقاط البيع والكاشير وتحديد نسب العمولة والحساب المالي.',
+    hasStdColumns: true,
+    hasRls: true,
+    triggers: ['touch_row', 'audit_trigger'],
+    columns: [
+      { name: 'tenant_id', type: 'uuid', nullable: false, isPk: true, isFk: true, fkTarget: 'core.tenants(id)', descriptionAr: 'معرف المنشأة' },
+      { name: 'id', type: 'uuid', nullable: false, isPk: true, isStd: true, descriptionAr: 'معرف وسيلة الدفع' },
+      { name: 'code', type: 'text', nullable: false, descriptionAr: 'كود الوسيلة (cash, visa_pos, bank_transfer, instapay)' },
+      { name: 'name_ar', type: 'text', nullable: false, descriptionAr: 'اسم طريقة السداد بالعربية' },
+      { name: 'name_en', type: 'text', nullable: false, descriptionAr: 'اسم طريقة السداد بالإنجليزية' },
+      { name: 'type', type: 'text', nullable: false, descriptionAr: 'النوع (نقدية / بطاقة / محفظة / آجل)' },
+      { name: 'commission_percent', type: 'numeric(5,2)', nullable: false, descriptionAr: 'نسبة عمولة بوابة الدفع أو البنك %' },
+      { name: 'linked_account_id', type: 'text', nullable: false, descriptionAr: 'الحساب المالي المرتبط بشجرة الحسابات' },
+      { name: 'is_active', type: 'boolean', nullable: false, descriptionAr: 'هل وسيلة الدفع مفعلة ومتاحة للكاشير؟' },
+      { name: 'requires_ref_no', type: 'boolean', nullable: false, descriptionAr: 'هل تتطلب إدخال رقم إيصال العملية بنكياً؟' },
+      { name: 'is_exclusive_to_pos', type: 'boolean', nullable: false, descriptionAr: 'حصرية الاستخدام في شاشة نقاط البيع (true)' }
+    ],
+    sampleSql: `SELECT code, name_ar, commission_percent, linked_account_id, is_active FROM sales.payment_methods WHERE is_active = true;`
+  },
+
+  // 4. EXPENSES TABLE (تسجيل المصروفات وربطها بطرق السداد)
+  {
+    schema: 'accounting',
+    tableName: 'expenses',
+    displayNameAr: 'سجل المصروفات والنثريات (Operational Expenses)',
+    descriptionAr: 'جدول تسجيل المصروفات التشغيلية والنثريات وربطها المباشر بطرق السداد وتوليد القيود الآلية.',
+    hasStdColumns: true,
+    hasRls: true,
+    triggers: ['touch_row', 'audit_trigger'],
+    columns: [
+      { name: 'tenant_id', type: 'uuid', nullable: false, isPk: true, isFk: true, fkTarget: 'core.tenants(id)', descriptionAr: 'معرف المنشأة' },
+      { name: 'id', type: 'uuid', nullable: false, isPk: true, isStd: true, descriptionAr: 'معرف سند الصرف' },
+      { name: 'expense_no', type: 'text', nullable: false, descriptionAr: 'رقم سند الصرف التسلسلي' },
+      { name: 'expense_date', type: 'date', nullable: false, descriptionAr: 'تاريخ صرف المصروف' },
+      { name: 'category', type: 'text', nullable: false, descriptionAr: 'بند المصروف (إيجار، صيانة، ضيافة، بوفيه، إعلانات)' },
+      { name: 'amount', type: 'numeric(18,4)', nullable: false, descriptionAr: 'قيمة المصروف بالجنيه المصري' },
+      { name: 'payment_method_id', type: 'uuid', nullable: false, isFk: true, fkTarget: 'sales.payment_methods(id)', descriptionAr: 'طريقة السداد المستخدمة' },
+      { name: 'beneficiary', type: 'text', nullable: false, descriptionAr: 'المستفيد / الجهة المستلمة' },
+      { name: 'reference_no', type: 'text', nullable: true, descriptionAr: 'رقم الفاتورة أو إيصال السداد' },
+      { name: 'branch_id', type: 'uuid', nullable: false, isFk: true, fkTarget: 'core.branches(id)', descriptionAr: 'الفرع المتحمل للمصروف' },
+      { name: 'recorded_by', type: 'uuid', nullable: false, isFk: true, fkTarget: 'core.users(id)', descriptionAr: 'المستخدم مسجل المصروف' },
+      { name: 'status', type: 'text', nullable: false, descriptionAr: 'حالة الاعتماد المالي' },
+      { name: 'journal_entry_id', type: 'uuid', nullable: true, isFk: true, fkTarget: 'accounting.journal_entries(id)', descriptionAr: 'القيد المحاسبي المتولد آلياً' }
+    ],
+    sampleSql: `SELECT expense_no, category, amount, payment_method_id, expense_date FROM accounting.expenses ORDER BY expense_date DESC;`
+  },
+
+  // 5. ACCOUNTING EXCLUSIVE MAPPING RULES (ربط أي تسجيل بالحسابات والقيود حصراً)
+  {
+    schema: 'accounting',
+    tableName: 'journal_mapping_rules',
+    displayNameAr: 'قواعد التوجيه المحاسبي الحصري (Strict Journal Mapping)',
+    descriptionAr: 'المصدر الوحيد والحصري لتوليد القيود المحاسبية الآلية من كافة العمليات التشغيلية.',
+    hasStdColumns: true,
+    hasRls: true,
+    triggers: ['touch_row', 'audit_trigger'],
+    columns: [
+      { name: 'tenant_id', type: 'uuid', nullable: false, isPk: true, isFk: true, fkTarget: 'core.tenants(id)', descriptionAr: 'معرف المنشأة' },
+      { name: 'id', type: 'uuid', nullable: false, isPk: true, isStd: true, descriptionAr: 'معرف قاعدة الربط' },
+      { name: 'transaction_type', type: 'text', nullable: false, descriptionAr: 'نوع العملية التشغيلية (POS, Expense, Supplier, Asset)' },
+      { name: 'code', type: 'text', nullable: false, descriptionAr: 'كود القاعدة المحاسبية' },
+      { name: 'name_ar', type: 'text', nullable: false, descriptionAr: 'اسم التوجيه المحاسبي' },
+      { name: 'source_screen', type: 'text', nullable: false, descriptionAr: 'الشاشة المصدر الحصرية' },
+      { name: 'debit_account_code', type: 'text', nullable: false, descriptionAr: 'رقم حساب الجانب المدين' },
+      { name: 'credit_account_code', type: 'text', nullable: false, descriptionAr: 'رقم حساب الجانب الدائن' },
+      { name: 'is_strict_exclusive_source', type: 'boolean', nullable: false, descriptionAr: 'إلزام كون الشاشة المصدر الحصري للقيد (true)' },
+      { name: 'auto_post_enabled', type: 'boolean', nullable: false, descriptionAr: 'الترحيل التلقائي المباشر لليومية العامة' }
+    ],
+    sampleSql: `SELECT code, transaction_type, debit_account_code, credit_account_code FROM accounting.journal_mapping_rules;`
+  },
+
+  // 6. BOOKINGS / RESERVATIONS INDEPENDENT TABLE (جدول مستقل للحجوزات)
+  {
+    schema: 'sales',
+    tableName: 'bookings',
+    displayNameAr: 'الحجوزات والمواعيد المسبقة (Bookings & Reservations)',
+    descriptionAr: 'جدول مستقل لإدارة الحجوزات والمواعيد والخدمات والعرابين المدفوعة ومتابعة الحضور.',
+    hasStdColumns: true,
+    hasRls: true,
+    triggers: ['touch_row', 'audit_trigger', 'realtime_notify'],
+    columns: [
+      { name: 'tenant_id', type: 'uuid', nullable: false, isPk: true, isFk: true, fkTarget: 'core.tenants(id)', descriptionAr: 'معرف المنشأة' },
+      { name: 'id', type: 'uuid', nullable: false, isPk: true, isStd: true, descriptionAr: 'المعرف الفريد للحجز' },
+      { name: 'booking_no', type: 'text', nullable: false, descriptionAr: 'رقم الحجز التسلسلي (BK-8821)' },
+      { name: 'customer_id', type: 'uuid', nullable: false, isFk: true, fkTarget: 'sales.customers(id)', descriptionAr: 'العميل صاحب الحجز' },
+      { name: 'service_name', type: 'text', nullable: false, descriptionAr: 'الخدمة أو الجلسة أو الكشف المطلوب' },
+      { name: 'booking_date', type: 'date', nullable: false, descriptionAr: 'تاريخ الحجز المجدول' },
+      { name: 'booking_time', type: 'time', nullable: false, descriptionAr: 'وقت الحجز بالساعة والدقيقة' },
+      { name: 'assigned_staff', type: 'text', nullable: false, descriptionAr: 'الأخصائي أو الطبيب المسؤول' },
+      { name: 'branch_id', type: 'uuid', nullable: false, isFk: true, fkTarget: 'core.branches(id)', descriptionAr: 'فرع الحجز' },
+      { name: 'deposit_amount', type: 'numeric(18,4)', nullable: false, descriptionAr: 'مبلغ العربون المسدد مقدماً' },
+      { name: 'estimated_amount', type: 'numeric(18,4)', nullable: false, descriptionAr: 'القيمة التقديرية الإجمالية' },
+      { name: 'status', type: 'text', nullable: false, descriptionAr: 'حالة الحجز (مؤكد / انتظار / مكتمل / ملغي)' }
+    ],
+    sampleSql: `SELECT booking_no, customer_id, booking_date, booking_time, status FROM sales.bookings WHERE booking_date = CURRENT_DATE;`
+  },
+
+  // 7. CUSTOMER FOLLOWUPS INDEPENDENT TABLE (جدول مستقل لمتابعات العملاء)
+  {
+    schema: 'sales',
+    tableName: 'customer_followups',
+    displayNameAr: 'سجل متابعات العملاء والعلاقات (Customer CRM Follow-ups)',
+    descriptionAr: 'جدول مستقل لتسجيل المكالمات ومتابعات الواتساب وزيارات العملاء وتحديد مواعيد التواصل القادمة.',
+    hasStdColumns: true,
+    hasRls: true,
+    triggers: ['touch_row', 'audit_trigger'],
+    columns: [
+      { name: 'tenant_id', type: 'uuid', nullable: false, isPk: true, isFk: true, fkTarget: 'core.tenants(id)', descriptionAr: 'معرف المنشأة' },
+      { name: 'id', type: 'uuid', nullable: false, isPk: true, isStd: true, descriptionAr: 'المعرف الفريد للمتابعة' },
+      { name: 'customer_id', type: 'uuid', nullable: false, isFk: true, fkTarget: 'sales.customers(id)', descriptionAr: 'العميل المعني بالمتابعة' },
+      { name: 'contact_date', type: 'timestamptz', nullable: false, descriptionAr: 'تاريخ وتوقيت التواصل' },
+      { name: 'channel', type: 'text', nullable: false, descriptionAr: 'قناة الاتصال (مكالمة، واتساب، زيارة، إيميل)' },
+      { name: 'purpose', type: 'text', nullable: false, descriptionAr: 'الغرض (رضا عملاء ما بعد الجلسة، تذكير بموعد، تحصيل)' },
+      { name: 'agent_name', type: 'text', nullable: false, descriptionAr: 'اسم موظف المتابعة المسؤول' },
+      { name: 'summary', type: 'text', nullable: false, descriptionAr: 'ملخص ما دار في المكالمة أو المحادثة' },
+      { name: 'next_followup_date', type: 'date', nullable: true, descriptionAr: 'تاريخ المتابعة القادمة المحدد' },
+      { name: 'outcome', type: 'text', nullable: false, descriptionAr: 'نتيجة التواصل والتقييم' }
+    ],
+    sampleSql: `SELECT customer_id, contact_date, channel, purpose, outcome, next_followup_date FROM sales.customer_followups;`
+  },
+
+  // 8. FIXED ASSETS WITH MACHINE WEAR TRACKING (إدارة الأصول الثابتة مع عمود استهلاك الجهاز)
+  {
+    schema: 'accounting',
+    tableName: 'fixed_assets',
+    displayNameAr: 'الأصول الثابتة وتتبع استهلاك الأجهزة (Fixed Assets & Device Wear)',
+    descriptionAr: 'جدول إدارة الأصول الثابتة شاملاً عمود تتبع استهلاك الجهاز وتشغيله وساعات العمل والصيانة الدورية.',
+    hasStdColumns: true,
+    hasRls: true,
+    triggers: ['touch_row', 'audit_trigger'],
+    columns: [
+      { name: 'tenant_id', type: 'uuid', nullable: false, isPk: true, isFk: true, fkTarget: 'core.tenants(id)', descriptionAr: 'معرف المنشأة' },
+      { name: 'id', type: 'uuid', nullable: false, isPk: true, isStd: true, descriptionAr: 'المعرف الفريد للأصل' },
+      { name: 'asset_code', type: 'text', nullable: false, descriptionAr: 'كود الأصل الثابت (مثال: AST-LZR-01)' },
+      { name: 'asset_name', type: 'text', nullable: false, descriptionAr: 'اسم الأصل أو نوع الجهاز' },
+      { name: 'category', type: 'text', nullable: false, descriptionAr: 'تصنيف الأصل (أجهزة ليزر وتجميل، فحص، حواسب)' },
+      { name: 'purchase_date', type: 'date', nullable: false, descriptionAr: 'تاريخ شراء وتوريد الجهاز' },
+      { name: 'purchase_cost', type: 'numeric(18,4)', nullable: false, descriptionAr: 'تكلفة الشراء التاريخية الأصلية' },
+      { name: 'useful_life_months', type: 'integer', nullable: false, descriptionAr: 'العمر الإنتاجي المقدر بالأشهر' },
+      { name: 'current_book_value', type: 'numeric(18,4)', nullable: false, descriptionAr: 'صافي القيمة الدفترية الحالية' },
+      { name: 'accumulated_depreciation', type: 'numeric(18,4)', nullable: false, descriptionAr: 'مجمع الإهلاك المحاسبي' },
+      { name: 'total_operating_hours', type: 'numeric(10,2)', nullable: false, descriptionAr: 'عمود استهلاك الجهاز: إجمالي ساعات التشغيل الفعلية' },
+      { name: 'total_sessions_count', type: 'integer', nullable: false, descriptionAr: 'عمود استهلاك الجهاز: عدد الجلسات المنفذة بالجهاز' },
+      { name: 'wear_percentage', type: 'numeric(5,2)', nullable: false, descriptionAr: 'عمود استهلاك الجهاز: نسبة استهلاك واهتراء الجهاز %' },
+      { name: 'device_health_status', type: 'text', nullable: false, descriptionAr: 'حالة كفاءة الجهاز (ممتاز، صيانة، استهلاك مرتفع)' }
+    ],
+    sampleSql: `SELECT asset_code, asset_name, total_operating_hours, wear_percentage, current_book_value FROM accounting.fixed_assets;`
+  },
+
+  // 9. DAILY EXECUTED SESSIONS (شاشة التشغيل وتسجيل الجلسات المنفذة خلال اليوم)
+  {
+    schema: 'clinic',
+    tableName: 'daily_sessions',
+    displayNameAr: 'جلسات التشغيل اليومية المنفذة (Daily Executed Sessions)',
+    descriptionAr: 'جدول تسجيل كافة الجلسات المنفذة خلال اليوم وربطها بالعميل والجهاز المستخدم وتحديث استهلاك الجهاز.',
+    hasStdColumns: true,
+    hasRls: true,
+    triggers: ['touch_row', 'audit_trigger', 'realtime_notify'],
+    columns: [
+      { name: 'tenant_id', type: 'uuid', nullable: false, isPk: true, isFk: true, fkTarget: 'core.tenants(id)', descriptionAr: 'معرف المنشأة' },
+      { name: 'id', type: 'uuid', nullable: false, isPk: true, isStd: true, descriptionAr: 'معرف جلسة التشغيل' },
+      { name: 'session_no', type: 'text', nullable: false, descriptionAr: 'رقم الجلسة اليومي (SES-2026-041)' },
+      { name: 'date_time', type: 'timestamptz', nullable: false, descriptionAr: 'تاريخ وتوقيت بدء الجلسة' },
+      { name: 'customer_id', type: 'uuid', nullable: false, isFk: true, fkTarget: 'sales.customers(id)', descriptionAr: 'العميل المتلقي للجلسة' },
+      { name: 'service_title', type: 'text', nullable: false, descriptionAr: 'نوع الجلسة أو الإجراء المنفذ' },
+      { name: 'device_id', type: 'uuid', nullable: false, isFk: true, fkTarget: 'accounting.fixed_assets(id)', descriptionAr: 'الجهاز / الأصل المستخدم في الجلسة' },
+      { name: 'specialist_name', type: 'text', nullable: false, descriptionAr: 'الأخصائي أو الطبيب المنفذ' },
+      { name: 'duration_minutes', type: 'integer', nullable: false, descriptionAr: 'مدة الجلسة بالدقائق (لتحديث استهلاك الجهاز)' },
+      { name: 'room_number', type: 'text', nullable: false, descriptionAr: 'رقم غرفة العمليات أو الجلسة' },
+      { name: 'materials_consumed', type: 'text', nullable: true, descriptionAr: 'المستهلكات والمواد الطبية المصروفة للجلسة' },
+      { name: 'session_fee', type: 'numeric(18,4)', nullable: false, descriptionAr: 'قيمة الجلسة المالية المحصلة' },
+      { name: 'status', type: 'text', nullable: false, descriptionAr: 'حالة التنفيذ (منفذة بنجاح / جارية / ملغاة)' },
+      { name: 'payment_method', type: 'text', nullable: false, descriptionAr: 'طريقة السداد المحصل بها' },
+      { name: 'journal_generated', type: 'boolean', nullable: false, descriptionAr: 'هل تم توليد القيد المحاسبي حصراً؟' }
+    ],
+    sampleSql: `SELECT session_no, customer_id, device_id, duration_minutes, session_fee, status FROM clinic.daily_sessions WHERE date_time >= CURRENT_DATE;`
   }
 ];

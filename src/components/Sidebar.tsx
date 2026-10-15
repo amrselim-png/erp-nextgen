@@ -30,7 +30,13 @@ import {
   Factory,
   Stethoscope,
   FileCheck2,
-  Settings
+  Settings,
+  Truck,
+  Receipt,
+  GitMerge,
+  Calendar,
+  MessageSquare,
+  CreditCard
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -64,6 +70,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const operationalNavItems: { id: AppTab; labelAr: string; icon: React.ReactNode; badge?: string }[] = [
     { id: 'admin_management', labelAr: 'الإدارة العامة والمستخدمين', icon: <Settings className="w-4 h-4" />, badge: 'المرحلة 1' },
     { id: 'pos_terminal', labelAr: 'الكاشير ونقاط البيع (POS)', icon: <ShoppingCart className="w-4 h-4" />, badge: 'المرحلة 3' },
+    { id: 'customers', labelAr: 'إدارة العملاء والمدينين', icon: <Users className="w-4 h-4" />, badge: 'جدول مستقل' },
+    { id: 'suppliers', labelAr: 'إدارة الموردين والدائنين', icon: <Truck className="w-4 h-4" />, badge: 'جدول مستقل' },
+    { id: 'payment_methods', labelAr: 'طرق السداد (حصري للكاشير)', icon: <CreditCard className="w-4 h-4" />, badge: 'كاشير' },
+    { id: 'expenses', labelAr: 'تسجيل المصروفات وسندات الصرف', icon: <Receipt className="w-4 h-4" />, badge: 'سداد' },
+    { id: 'accounting_mapping', labelAr: 'توجيه الحسابات ومولد القيود', icon: <GitMerge className="w-4 h-4" />, badge: 'مصدر حصري' },
+    { id: 'reservations', labelAr: 'إدارة الحجوزات والمواعيد', icon: <Calendar className="w-4 h-4" />, badge: 'جدول مستقل' },
+    { id: 'customer_followups', labelAr: 'متابعات العملاء (CRM)', icon: <MessageSquare className="w-4 h-4" />, badge: 'جدول مستقل' },
+    { id: 'fixed_assets', labelAr: 'الأصول الثابتة واستهلاك الأجهزة', icon: <Cpu className="w-4 h-4" />, badge: 'عداد استهلاك' },
+    { id: 'daily_sessions', labelAr: 'جلسات التشغيل المنفذة اليوم', icon: <Activity className="w-4 h-4" />, badge: 'تشغيل اليوم' },
     { id: 'inventory_ops', labelAr: 'المخازن وحركات البضاعة', icon: <Package className="w-4 h-4" />, badge: 'حي' },
     { id: 'purchasing', labelAr: 'المشتريات وسداد الموردين', icon: <ShoppingBag className="w-4 h-4" />, badge: 'جديد' },
     { id: 'accounting_ledger', labelAr: 'دفتر اليومية والحسابات (GL)', icon: <Scale className="w-4 h-4" />, badge: 'مالي' },
